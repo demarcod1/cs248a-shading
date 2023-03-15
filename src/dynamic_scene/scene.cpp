@@ -1,6 +1,7 @@
 #include "scene.h"
 
 #include <fstream>
+#include <iostream>
 
 #include "../gl_utils.h"
 #include "mesh.h"
@@ -47,7 +48,14 @@ Matrix4x4 createWorldToCameraMatrix(const Vector3D& eye, const Vector3D& at, con
   // TODO CS248 Part 1: Coordinate transform
   // Compute the matrix that transforms a point in world space to a point in camera space.
 
-  return Matrix4x4::translation(Vector3D(-20,0,-150));
+  Vector3D n = at - eye;
+  n.normalize();
+  Vector3D u = Matrix3x3::crossProduct(n) * up;
+  u.normalize();
+  double data[] = { u[0], u[1], u[2], 0, up[0]/up.norm(), up[1]/up.norm(), up[2]/up.norm(), 0, -n[0], -n[1], -n[2], 0, 0, 0, 0, 1};
+  Matrix4x4 transf(data);
+
+  return transf * Matrix4x4::translation(-eye);
 
 }
 
