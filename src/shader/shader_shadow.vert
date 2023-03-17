@@ -1,12 +1,8 @@
-uniform mat4 obj2world;                 // object to world space transform
-
-uniform int  num_spot_lights;
-#define MAX_NUM_LIGHTS 10
-
-
+uniform mat4 obj2world;                 // object to world transform
 uniform mat3 obj2worldNorm;             // object to world transform for normals
-uniform vec3 camera_position;           // world space camera position           
-uniform mat4 mvp;                       // ModelViewProjection Matrix
+uniform vec3 camera_position;           // world space camera position
+
+uniform mat4 mvp;  // model-view-projection matrix
 
 uniform bool useNormalMapping;         // true if normal mapping should be used
 
@@ -29,22 +25,9 @@ void main(void)
 {
     position = vec3(obj2world * vec4(vtx_position, 1));
 
-    //
-    // TODO CS248 Part 5.2: Shadow Mapping:
-    //
-    // After you have computed in client c++ code the transforms from object space to the 
-    // light space, bind the values as a uniform array of mat4 into the vertex
-    // shader, and cmpute light-space surface position by multiplying object space position
-    // (given by vtx_position) with the computed transforms, placing results in
-    // an array of vec4 and pass them to the fragment shader.
-    //
-    // Recall for shadow mapping we need to know the position of the surface relative
-    // to each shadowed light source.
+    // TODO CS248 Part3: Normal Mapping
+    // compute 3x3 tangent space to world space matrix here: tan2world
 
-
-    // TODO CS248 Part 3: Normal Mapping: compute 3x3 tangent space to world space matrix here: tan2world
-    //
-       
     // Tips:
     //
     // (1) Make sure you normalize all columns of the matrix so that it is a rotation matrix.

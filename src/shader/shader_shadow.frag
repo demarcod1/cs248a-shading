@@ -60,7 +60,7 @@ in vec3 vertex_diffuse_color; // surface color
 out vec4 fragColor;
 
 #define PI 3.14159265358979323846
-
+#define SMOOTHING 0.1
 
 //
 // Simple diffuse brdf
@@ -86,7 +86,13 @@ vec3 Phong_BRDF(vec3 L, vec3 V, vec3 N, vec3 diffuse_color, vec3 specular_color,
     // Implement diffuse and specular terms of the Phong
     // reflectance model here.
 
-    return diffuse_color;
+    vec3 Lhat = normalize(L);
+    vec3 Nhat = normalize(N);
+    vec3 Vhat = normalize(V);
+    vec3 Rhat = (2 * dot(Lhat, Nhat) * Nhat) - Lhat;
+
+    return (max(0, dot(Lhat, Nhat)) * diffuse_color)
+        + (pow(max(0, dot(Rhat, Vhat)), specular_exponent) * specular_color);
 }
 
 //
@@ -247,8 +253,11 @@ void main(void)
         //       facing out area.  Smaller values of SMOOTHING will create hard spotlights.
 
         // CS248: remove this once you perform proper attenuation computations
-        intensity = vec3(0.5, 0.5, 0.5);
-
+        intensity *= 1.0 / (1.0 + dot(dir_to_surface, dir_to_surface));
+        float smoothFactor = (angle - ((1.0 + SMOOTHING) * cone_angle))
+            / (-2.0 * SMOOTHING * cone_angle);
+        smoothFactor = clamp(smoothFactor, 0.0, 1.0);
+        intensity *= smoothFactor;
 
         // Render Shadows for all spot lights
         // TODO CS248 Part 5.2: Shadow Mapping: comute shadowing for spotlight i here 
