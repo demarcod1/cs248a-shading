@@ -40,6 +40,10 @@ uniform vec3  spot_light_directions[MAX_NUM_LIGHTS];
 uniform vec3  spot_light_intensities[MAX_NUM_LIGHTS];
 uniform float spot_light_angles[MAX_NUM_LIGHTS];
 
+//
+// Shadowed lights
+//
+uniform sampler2DArray depthTextureArray;
 
 //
 // material-specific uniforms
@@ -56,6 +60,7 @@ in vec2 texcoord;     // surface texcoord (uv)
 in vec3 dir2camera;   // vector from surface point to camera
 in mat3 tan2world;    // tangent space to world space transform
 in vec3 vertex_diffuse_color; // surface color
+in vec4 lightSpacePositions[MAX_NUM_LIGHTS];  // light space(s) position
 
 out vec4 fragColor;
 
@@ -260,13 +265,23 @@ void main(void)
         intensity *= smoothFactor;
 
         // Render Shadows for all spot lights
-        // TODO CS248 Part 5.2: Shadow Mapping: comute shadowing for spotlight i here 
+        // TODO CS248 Part 5.2: Shadow Mapping: comute shadowing for spotlight i
+        // here
 
+        vec2 shadow_uv = lightSpacePositions[i].xy / lightSpacePositions[i].w;
+        float projDist = lightSpacePositions[i].z / lightSpacePositions[i].w;
 
-	    vec3 L = normalize(-spot_light_directions[i]);
-		vec3 brdf_color = Phong_BRDF(L, V, N, diffuseColor, specularColor, specularExponent);
+        if (0.0 < shadow_uv.x && shadow_uv.x < 1.0 && 0.0 < shadow_uv.y
+            && shadow_uv.y < 1.0) {
+            float depthTex = texture(depthTextureArray, vec3(shadow_uv, i)).x;
+            if (projDist > depthTex + 0.005) intensity *= 0.0;
+        }
 
-	    Lo += intensity * brdf_color;
+        vec3 L = normalize(-spot_light_directions[i]);
+        vec3 brdf_color =
+            Phong_BRDF(L, V, N, diffuseColor, specularColor, specularExponent);
+
+        Lo += intensity * brdf_color;
     }
 
     fragColor = vec4(Lo, 1);

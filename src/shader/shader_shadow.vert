@@ -6,6 +6,13 @@ uniform mat4 mvp;  // model-view-projection matrix
 
 uniform bool useNormalMapping;         // true if normal mapping should be used
 
+//
+// Shadowed lights
+//
+#define MAX_NUM_LIGHTS 10
+uniform int num_spot_lights;
+uniform mat4 world2light[MAX_NUM_LIGHTS];
+
 // per vertex input attributes 
 in vec3 vtx_position;            // object space position
 in vec3 vtx_tangent;
@@ -20,6 +27,7 @@ out vec2 texcoord;
 out vec3 dir2camera;                // world space vector from surface point to camera
 out vec3 normal;
 out mat3 tan2world;                 // tangent space rotation matrix multiplied by obj2WorldNorm
+out vec4 lightSpacePositions[MAX_NUM_LIGHTS];  // light space(s) position
 
 void main(void)
 {
@@ -50,4 +58,7 @@ void main(void)
     texcoord = vtx_texcoord;
     dir2camera = camera_position - position;
     gl_Position = mvp * vec4(vtx_position, 1);
+
+    for (int i = 0; i < num_spot_lights; i++)
+        lightSpacePositions[i] = world2light[i] * vec4(position, 1);
 }

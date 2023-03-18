@@ -303,8 +303,8 @@ void Scene::renderShadowPass(int shadowedLightIndex) {
     Matrix4x4 proj = createPerspectiveMatrix(fovy, aspect, near, far);
     Matrix4x4 worldToLightNDC = proj * worldToLight;
     worldToShadowLight_[shadowedLightIndex] =
-        Matrix4x4::translation(Vector3D{1.}) * Matrix4x4::scaling(Vector3D{0.5})
-        * worldToLightNDC;
+        Matrix4x4::translation(Vector3D{0.5})
+        * Matrix4x4::scaling(Vector3D{0.5}) * worldToLightNDC;
 
     glViewport(0, 0, shadowTextureSize_, shadowTextureSize_);
 
