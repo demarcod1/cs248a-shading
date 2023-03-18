@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+PointerAlignment: Left
+DerivePointerAlignment: false
+AlignAfterOpenBracket: Align
+SortIncludes: true
+BreakBeforeBinaryOperators: NonAssignment
+AlignOperands: false
+ColumnLimit: 80
+BinPackParameters: false
+BinPackArguments: false
+IndentWidth: 4
+PackConstructorInitializers: CurrentLine
+ConstructorInitializerIndentWidth: 8

@@ -239,7 +239,7 @@ void Scene::renderShadowPass(int shadowedLightIndex) {
 
     checkGLError("begin shadow pass");
 
-    Vector3D lightDir  = spotLights_[shadowedLightIndex]->direction;
+    Vector3D lightDir = spotLights_[shadowedLightIndex]->direction.unit();
     Vector3D lightPos  = spotLights_[shadowedLightIndex]->position;
     float    coneAngle = spotLights_[shadowedLightIndex]->angle;
 
@@ -251,31 +251,60 @@ void Scene::renderShadowPass(int shadowedLightIndex) {
     float far = 400.;
 
     // TODO CS248 Part 5.2 Shadow Mapping
-    // Here we render the shadow map for the given light. You need to accomplish the following:
-    // (1) You need to use gl_mgr_->bindFrameBuffer on the correct framebuffer to render into.
-    // (2) You need to compute the correct worldToLightNDC matrix to pass into drawShadow by
-    //     pretending there is a camera at the light source looking at the scene. Some fake camera
-    //     parameters are provided to you in the code above.
-    // (3) You need to compute a worldToShadowLight matrix that takes the point in world space and
-    //     transforms it into "light space" for the fragment shader to use to sample from the shadow map.
-    //     Note that this is almost worldToLightNDC with an additional transform that converts 
-    //     coordinates in the [-w,w]^3 normalized device coordinate box 
-    //     (the result of the perspective projection transform) to coordinates in a [0,w]^3 volume.
-    //     After homogeneous divide. this means that x,y correspond to valid texture
-    //     coordinates in the [0,1]^2 domain that can be used for a shadow map lookup in the shader.
-    //     You should put it in the right place in worldToShadowLight_ array.
-    // Caveat: GLResourceManager::bindFrameBuffer uses the RAII idiom (https://en.cppreference.com/w/cpp/language/raii)
-    //     Which means you have to give the return value a name since its destructor will release the binding.
-    //     Bad:
-    //       gl_mgr_->bindFrameBuffer(100);  // Return value is destructed immediately!
-    //       drawTriangles();  //  <- Framebuffer 100 is not bound!!!
+    // Here we render the shadow map for the given light. You need to accomplish
+    // the following: (1) You need to use gl_mgr_->bindFrameBuffer on the
+    // correct framebuffer to render into. (2) You need to compute the correct
+    // worldToLightNDC matrix to pass into drawShadow by
+    //     pretending there is a camera at the light source looking at the
+    //     scene. Some fake camera parameters are provided to you in the code
+    //     above.
+    // (3) You need to compute a worldToShadowLight matrix that takes the point
+    // in world space and
+    //     transforms it into "light space" for the fragment shader to use to
+    //     sample from the shadow map. Note that this is almost worldToLightNDC
+    //     with an additional transform that converts coordinates in the
+    //     [-w,w]^3 normalized device coordinate box (the result of the
+    //     perspective projection transform) to coordinates in a [0,w]^3 volume.
+    //     After homogeneous divide. this means that x,y correspond to valid
+    //     texture coordinates in the [0,1]^2 domain that can be used for a
+    //     shadow map lookup in the shader. You should put it in the right place
+    //     in worldToShadowLight_ array.
+    // Caveat: GLResourceManager::bindFrameBuffer uses the RAII idiom
+    // (https://en.cppreference.com/w/cpp/language/raii)
+    //     Which means you have to give the return value a name since its
+    //     destructor will release the binding. Bad:
+    //       gl_mgr_->bindFrameBuffer(100);  // Return value is destructed
+    //       immediately! drawTriangles();  //  <- Framebuffer 100 is not
+    //       bound!!!
     //     Good:
     //       auto fb_bind = gl_mgr_->bindFrameBuffer(100);
-    //       drawTriangles();  //  <- Framebuffer 100 is bound, since fb_bind is still alive here.
-    // 
-    // Replaces the following lines with correct implementation.
-    Matrix4x4 worldToLightNDC = Matrix4x4::identity();
-    worldToShadowLight_[shadowedLightIndex].zero();
+    //       drawTriangles();  //  <- Framebuffer 100 is bound, since fb_bind is
+    //       still alive here.
+    //
+
+    auto fb_bind =
+        gl_mgr_->bindFrameBuffer(shadowFrameBufferId_[shadowedLightIndex]);
+
+    /* Find some direction orthogonal to light direction. */
+    Vector3D lightUp;
+    lightUp =
+        Vector3D{0., 1., 0.} - dot(lightDir, Vector3D{0., 1., 0.}) * lightDir;
+    if (lightUp.norm2() == 0.)
+        lightUp = Vector3D{1., 0., 0.}
+            - dot(lightDir, Vector3D{1., 0., 0.}) * lightDir;
+    if (lightUp.norm2() == 0.)
+        lightUp = Vector3D{0., 0., 1.}
+            - dot(lightDir, Vector3D{0., 0., 1.}) * lightDir;
+    lightUp = lightUp.unit();
+
+    /* Use directions to compute light space transformations. */
+    Matrix4x4 worldToLight =
+        createWorldToCameraMatrix(lightPos, lightDir, lightUp);
+    Matrix4x4 proj = createPerspectiveMatrix(fovy, aspect, near, far);
+    Matrix4x4 worldToLightNDC = proj * worldToLight;
+    worldToShadowLight_[shadowedLightIndex] =
+        Matrix4x4::translation(Vector3D{0.5})
+        * Matrix4x4::scaling(Vector3D{0.5}) * worldToLightNDC;
 
     glViewport(0, 0, shadowTextureSize_, shadowTextureSize_);
 
@@ -287,7 +316,6 @@ void Scene::renderShadowPass(int shadowedLightIndex) {
         obj->drawShadow(worldToLightNDC);
 
     checkGLError("end shadow pass");
-    
 }
 
 void Scene::visualizeShadowMap() {

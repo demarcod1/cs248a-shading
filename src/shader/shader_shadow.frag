@@ -40,6 +40,10 @@ uniform vec3  spot_light_directions[MAX_NUM_LIGHTS];
 uniform vec3  spot_light_intensities[MAX_NUM_LIGHTS];
 uniform float spot_light_angles[MAX_NUM_LIGHTS];
 
+//
+// Shadowed lights
+//
+uniform sampler2DArray depthTextureArray;
 
 //
 // material-specific uniforms
@@ -56,11 +60,12 @@ in vec2 texcoord;     // surface texcoord (uv)
 in vec3 dir2camera;   // vector from surface point to camera
 in mat3 tan2world;    // tangent space to world space transform
 in vec3 vertex_diffuse_color; // surface color
+in vec4 lightSpacePositions[MAX_NUM_LIGHTS];  // light space(s) position
 
 out vec4 fragColor;
 
 #define PI 3.14159265358979323846
-
+#define SMOOTHING 0.1
 
 //
 // Simple diffuse brdf
@@ -86,7 +91,13 @@ vec3 Phong_BRDF(vec3 L, vec3 V, vec3 N, vec3 diffuse_color, vec3 specular_color,
     // Implement diffuse and specular terms of the Phong
     // reflectance model here.
 
-    return diffuse_color;
+    vec3 Lhat = normalize(L);
+    vec3 Nhat = normalize(N);
+    vec3 Vhat = normalize(V);
+    vec3 Rhat = (2 * dot(Lhat, Nhat) * Nhat) - Lhat;
+
+    return (max(0, dot(Lhat, Nhat)) * diffuse_color)
+        + (pow(max(0, dot(Rhat, Vhat)), specular_exponent) * specular_color);
 }
 
 //
@@ -247,17 +258,41 @@ void main(void)
         //       facing out area.  Smaller values of SMOOTHING will create hard spotlights.
 
         // CS248: remove this once you perform proper attenuation computations
-        intensity = vec3(0.5, 0.5, 0.5);
-
+        intensity *= 1.0 / (1.0 + dot(dir_to_surface, dir_to_surface));
+        float smoothFactor = (angle - ((1.0 + SMOOTHING) * cone_angle))
+            / (-2.0 * SMOOTHING * cone_angle);
+        smoothFactor = clamp(smoothFactor, 0.0, 1.0);
+        intensity *= smoothFactor;
 
         // Render Shadows for all spot lights
-        // TODO CS248 Part 5.2: Shadow Mapping: comute shadowing for spotlight i here 
+        // TODO CS248 Part 5.2: Shadow Mapping: comute shadowing for spotlight i
+        // here
 
+        vec2 shadow_uv = lightSpacePositions[i].xy / lightSpacePositions[i].w;
+        float projDist = lightSpacePositions[i].z / lightSpacePositions[i].w;
 
-	    vec3 L = normalize(-spot_light_directions[i]);
-		vec3 brdf_color = Phong_BRDF(L, V, N, diffuseColor, specularColor, specularExponent);
+        float pcf_step_size = 256;
+        float shadowedSampleCount = 0;
+        for (int j = -2; j <= 2; j++) {
+            for (int k = -2; k <= 2; k++) {
+                vec2 offset = vec2(j, k) / pcf_step_size;
+                // sample shadow map at shadow_uv + offset
+                // and test if the surface is in shadow according to this
+                // sample
+                float depthTex =
+                    texture(depthTextureArray, vec3(shadow_uv + offset, i)).x;
+                if (projDist > depthTex + 0.005) shadowedSampleCount += 1;
+            }
+        }
+        // record the fraction (out of 25) of shadow tests that are in
+        // shadow and attenuate illumination accordingly
+        intensity *= (25.0 - shadowedSampleCount) / 25.0;
 
-	    Lo += intensity * brdf_color;
+        vec3 L = normalize(-spot_light_directions[i]);
+        vec3 brdf_color =
+            Phong_BRDF(L, V, N, diffuseColor, specularColor, specularExponent);
+
+        Lo += intensity * brdf_color;
     }
 
     fragColor = vec4(Lo, 1);
