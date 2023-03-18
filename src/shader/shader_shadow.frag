@@ -271,11 +271,22 @@ void main(void)
         vec2 shadow_uv = lightSpacePositions[i].xy / lightSpacePositions[i].w;
         float projDist = lightSpacePositions[i].z / lightSpacePositions[i].w;
 
-        if (0.0 < shadow_uv.x && shadow_uv.x < 1.0 && 0.0 < shadow_uv.y
-            && shadow_uv.y < 1.0) {
-            float depthTex = texture(depthTextureArray, vec3(shadow_uv, i)).x;
-            if (projDist > depthTex + 0.005) intensity *= 0.0;
+        float pcf_step_size = 256;
+        float shadowedSampleCount = 0;
+        for (int j = -2; j <= 2; j++) {
+            for (int k = -2; k <= 2; k++) {
+                vec2 offset = vec2(j, k) / pcf_step_size;
+                // sample shadow map at shadow_uv + offset
+                // and test if the surface is in shadow according to this
+                // sample
+                float depthTex =
+                    texture(depthTextureArray, vec3(shadow_uv + offset, i)).x;
+                if (projDist > depthTex + 0.005) shadowedSampleCount += 1;
+            }
         }
+        // record the fraction (out of 25) of shadow tests that are in
+        // shadow and attenuate illumination accordingly
+        intensity *= (25.0 - shadowedSampleCount) / 25.0;
 
         vec3 L = normalize(-spot_light_directions[i]);
         vec3 brdf_color =
