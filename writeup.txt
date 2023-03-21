@@ -1,6 +1,26 @@
+CS248A Shaders Project
+Dominic DeMarco & Akram Sbaih
+suids: demarcod, akram
 
-suid: akram
-
-Implemented features:
+Akram's implemented features:
   * Spotlights with smooth edges.
   * Shadows with smooth edges.
+
+Dominic's implemented features:
+  * Coordinate Transform
+  * Phong Reflectance
+  * Normal Mapping
+  * Environment Lighting
+
+New assets include:
+  * Two new environment maps
+    * suburban street
+    * stadium
+  * Three new materials and their associated normal maps
+    * basketball
+    * soccer ball
+    * soocer field
+  * Transformed variations on the original environment maps
+    to enable a cool scene exploration effect.
+
+All assets can be found in the media/textures folder.

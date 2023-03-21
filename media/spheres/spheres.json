@@ -46,6 +46,7 @@
             "spec_exp" : 20.0,
 			"diffuse_filename" : "../textures/brick_color_map.png",
 			"normal_filename" : "../textures/brick_normal_map.png",
+			"environment_filename" : "../textures/streetscene.png",
 			"texcoord_v_flip" : "true",
             "texcoord_u_scale" : 1,
             "texcoord_v_scale" : 1,
