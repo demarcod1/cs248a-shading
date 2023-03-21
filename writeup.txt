@@ -1,0 +1,6 @@
+
+suid: akram
+
+Implemented features:
+  * Spotlights with smooth edges.
+  * Shadows with smooth edges.
